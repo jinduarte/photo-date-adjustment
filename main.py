@@ -1,45 +1,60 @@
 from PIL import Image
-from PIL.ExifTags import TAGS
 import os
+import subprocess
+import piexif
 from datetime import datetime
 
-def obter_atributos_imagem(caminho_imagem):
+def format_creation_date(original_creation_date):
+    return datetime.strptime(original_creation_date, '%Y:%m:%d %H:%M:%S').strftime('%Y-%m-%d %H:%M:%S')
+
+def get_image_attributes(image_path):
     try:
-        # Abrir a imagem
-        imagem = Image.open(caminho_imagem)
+        # Open the image
+        image = Image.open(image_path)
 
-        # Obter tamanho da imagem em MB
-        tamanho_mb = os.path.getsize(caminho_imagem) / (1024 * 1024)
+        # Get image size in MB
+        size_mb = os.path.getsize(image_path) / (1024 * 1024)
 
-        # Obter altura e largura da imagem
-        largura, altura = imagem.size
+        # Get width and height of the image
+        width, height = image.size
 
-        # Obter data de modificação da imagem
-        data_modificacao = os.path.getmtime(caminho_imagem)
+        # Get image modification date
+        modification_date = os.path.getmtime(image_path)
 
-        # Obter os metadados EXIF da imagem
-        exif = imagem._getexif()
+        # Get EXIF metadata of the image
+        exif_bytes = image.info.get("exif")
 
-        # Extrair a data de criação original da imagem dos metadados EXIF
-        data_criacao = exif.get(36867) if exif else None  # Tag para data de criação original
+        # Convert EXIF metadata from bytes to dictionary
+        exif_dict = {}
+        if exif_bytes:
+            exif_dict = piexif.load(exif_bytes)
 
-        # Imprimir os atributos
-        print(f"Tamanho da imagem: {tamanho_mb:.2f} MB")
-        print(f"Largura: {largura} pixels")
-        print(f"Altura: {altura} pixels")
-        print(f"Data de criação original: {data_criacao}")
-        print(f"Data de modificação: {datetime.fromtimestamp(data_modificacao)}")
+        # Extract original creation date from EXIF metadata
+        original_creation_date = exif_dict["Exif"].get(piexif.ExifIFD.DateTimeOriginal, "Unknown").decode()
 
-        # Mostrar outros atributos da imagem
-        # outros_atributos = imagem.info
-        # print("Outros atributos da imagem:")
-        # for chave, valor in outros_atributos.items():
-        #     print(f"{chave}: {valor}")
+        # Format modification date
+        modification_date_formatted = datetime.fromtimestamp(modification_date).strftime('%Y-%m-%d %H:%M:%S')
+
+        # Format original creation date
+        original_creation_date_formatted = format_creation_date(original_creation_date)
+
+        # Change the creation date of the file
+        subprocess.run(["touch", "-d", original_creation_date_formatted, image_path])
+
+        # Print the attributes
+        print_image_attributes(size_mb, width, height, original_creation_date_formatted, modification_date_formatted)
 
     except Exception as e:
-        print(f"Erro ao obter os atributos da imagem: {e}")
+        print(f"Error while getting image attributes: {e}")
+
+def print_image_attributes(size_mb, width, height, original_creation_date_formatted, modification_date_formatted):
+    print(f"Image size: {size_mb:.2f} MB")
+    print(f"Width: {width} pixels")
+    print(f"Height: {height} pixels")
+    print(f"Original creation date: {original_creation_date_formatted}")
+    print(f"Modification date: {modification_date_formatted}")
 
 if __name__ == "__main__":
-    caminho_imagem = input("Digite o caminho da imagem: ").strip()
-    # caminho_imagem = '/home/jean/Pictures/IMG_20141121_223739.jpg'.strip()
-    obter_atributos_imagem(caminho_imagem)
+    # image_path = input("Enter the image path: ").strip()
+    image_path = '/home/jean/Pictures/IMG_20141121_223739.jpg'.strip()
+    get_image_attributes(image_path)

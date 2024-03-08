@@ -3,10 +3,15 @@ Adjusting the date of photos and images, searching their metadata for original i
 
 # pre-requisites
 
- - python3
+Using Python3, this program also uses the following additional packages: 
+
  - PIL
+ - piexif
+ - pyutime
 ```
 pip install Pillow
+pip install piexif
+pip install pyutime
 ```
 
 # recommendations
